@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: delivery-service
+  
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/delivery_db
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: delivery-service-group
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: com.ecommerce.commons.event
+    producer:
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+server:
+  port: 8087
+
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890AbcDef}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+

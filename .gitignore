@@ -1,0 +1,35 @@
+code .gitignore
+```
+
+Paste this content and save:
+```
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Environment
+.env
+*.env
+
+# Python ML service
+__pycache__/
+*.pyc
+*.pyo
+*.pkl
+venv/
+.venv/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
