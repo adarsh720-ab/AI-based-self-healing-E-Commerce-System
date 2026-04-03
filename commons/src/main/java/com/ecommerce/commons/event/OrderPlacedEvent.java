@@ -1,5 +1,6 @@
 package com.ecommerce.commons.event;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,7 @@ public class OrderPlacedEvent {
     private UUID addressId;
     private BigDecimal totalAmount;
     private List<ItemDto> items;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private LocalDateTime timestamp;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

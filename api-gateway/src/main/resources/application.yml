@@ -6,49 +6,49 @@ spring:
     gateway:
       routes:
         - id: auth-service
-          uri: http://auth-service:8089
+          uri: ${SERVICES_AUTH_URL:http://localhost:8089}
           predicates:
             - Path=/api/auth/**
           filters:
             - RewritePath=/api/auth/(?<path>.*), /api/auth/$\{path}
 
         - id: user-service
-          uri: http://user-service:8081
+          uri: ${SERVICES_USER_URL:http://localhost:8081}
           predicates:
             - Path=/api/users/**
           filters:
             - RewritePath=/api/users/(?<path>.*), /api/users/$\{path}
 
         - id: product-service
-          uri: http://product-service:8082
+          uri: ${SERVICES_PRODUCT_URL:http://localhost:8082}
           predicates:
             - Path=/api/products/**
           filters:
             - RewritePath=/api/products/(?<path>.*), /api/products/$\{path}
 
         - id: order-service
-          uri: http://order-service:8083
+          uri: ${SERVICES_ORDER_URL:http://localhost:8083}
           predicates:
             - Path=/api/orders/**
           filters:
             - RewritePath=/api/orders/(?<path>.*), /api/orders/$\{path}
 
         - id: payment-service
-          uri: http://payment-service:8084
+          uri: ${SERVICES_PAYMENT_URL:http://localhost:8084}
           predicates:
             - Path=/api/payments/**
           filters:
             - RewritePath=/api/payments/(?<path>.*), /api/payments/$\{path}
 
         - id: inventory-service
-          uri: http://inventory-service:8085
+          uri: ${SERVICES_INVENTORY_URL:http://localhost:8085}
           predicates:
             - Path=/api/inventory/**
           filters:
             - RewritePath=/api/inventory/(?<path>.*), /api/inventory/$\{path}
 
         - id: delivery-service
-          uri: http://delivery-service:8087
+          uri: ${SERVICES_DELIVERY_URL:http://localhost:8087}
           predicates:
             - Path=/api/deliveries/**
           filters:
@@ -77,12 +77,30 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+          max-wait: 2000ms
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        spring.json.add.type.headers: false
+    listener:
+      concurrency: 3
+      ack-mode: BATCH
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
 server:
   port: 8080
+  shutdown: graceful
 
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890AbcDef}
@@ -91,5 +109,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
-
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    redis:
+      enabled: true

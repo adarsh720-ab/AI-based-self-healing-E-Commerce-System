@@ -8,6 +8,7 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 class AnomalyPredictor:
 
     def __init__(self):
@@ -41,8 +42,8 @@ class AnomalyPredictor:
 
     def _error_severity(self, error_code: str) -> int:
         if not error_code: return 0
-        if "Retryable" in error_code or "Timeout" in error_code: return 3
-        if "InsufficientStock" in error_code or "PaymentFailed" in error_code: return 2
+        if "Retryable" in str(error_code) or "Timeout" in str(error_code): return 3
+        if "InsufficientStock" in str(error_code) or "PaymentFailed" in str(error_code): return 2
         return 1
 
     def _status_category(self, status_code: int) -> int:
@@ -88,29 +89,57 @@ class AnomalyPredictor:
             }
         except Exception as e:
             logger.error(f"Prediction failed for log {log.get('traceId')}: {e}")
-            return {"isAnomaly": False, "anomalyScore": 0.0,
-                    "anomalyType": None, "confidence": None}
+            return {
+                "isAnomaly":    False,
+                "anomalyScore": 0.0,
+                "anomalyType":  None,
+                "confidence":   None
+            }
 
     def _classify_anomaly(self, log: Dict[str, Any], score: float) -> str:
         status_code = int(log.get("statusCode", 200))
         latency     = float(log.get("latencyMs", 0))
         error_code  = log.get("errorCode", "")
         level       = log.get("level", "INFO")
+
+        # Service unreachable
         if status_code == 503 or (error_code and "Retryable" in str(error_code)):
             return "service_down"
+
+        # Timeout
         if status_code == 504 or (error_code and "Timeout" in str(error_code)):
             return "latency_spike_with_errors"
+
+        # Pure latency spike — succeeded but very slow
         if latency >= 2000 and level == "INFO":
             return "latency_spike"
+
+        # Slow and failed
         if latency >= 2000 and level == "ERROR":
             return "latency_spike_with_errors"
-        if level == "ERROR":
+
+        # Any error or 4xx
+        if level == "ERROR" or status_code >= 400:
             return "error_spike"
-        return "unknown_anomaly"
+
+        # Moderately slow
+        if latency >= 500:
+            return "latency_spike"
+
+        # Model flagged it — statistically unusual but no clear pattern
+        return "unusual_behavior"
 
     def _confidence(self, score: float) -> str:
-        if score < -0.10: return "HIGH"
-        if score < -0.05: return "MEDIUM"
-        return "LOW"
+        """
+        Thresholds derived from real log score distribution:
+        - Service down (503):          -0.045 to -0.073
+        - Timeout / latency spike:     -0.10  to -0.13
+        - Mild errors (conflict/404):  -0.001 to -0.004
+        """
+        if score < -0.07:   return "HIGH"      # timeouts, full service down
+        if score < -0.03:   return "MEDIUM"    # 503s, connection refused bursts
+        return "LOW"                           # mild errors, single failures
 
+
+# Singleton — loaded once at startup, reused for every log
 predictor = AnomalyPredictor()

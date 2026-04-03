@@ -84,7 +84,12 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public void restockInventory(RestockRequest request) {
         Inventory inv = inventoryRepository.findByProductId(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found for product: " + request.getProductId()));
+                .orElseGet(() -> Inventory.builder()
+                        .productId(request.getProductId())
+                        .quantity(0)
+                        .reserved(0)
+                        .warehouse("DEFAULT")
+                        .build());
 
         inv.setQuantity(inv.getQuantity() + request.getQuantity());
         inventoryRepository.save(inv);

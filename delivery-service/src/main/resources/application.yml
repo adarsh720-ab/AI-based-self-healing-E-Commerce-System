@@ -1,16 +1,25 @@
 spring:
   application:
     name: delivery-service
-  
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:5432/delivery_db
     username: ${DB_USER:postgres}
     password: ${DB_PASS:postgres}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      pool-name: delivery-service-pool
+      leak-detection-threshold: 60000
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -19,17 +28,27 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     consumer:
       group-id: delivery-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring:
-          json:
-            trusted:
-              packages: com.ecommerce.commons.event
+        spring.json.trusted.packages: com.ecommerce.commons.event
+        spring.json.add.type.headers: false
     producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    listener:
+      concurrency: 3
+      ack-mode: BATCH
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
 server:
   port: 8087
+  shutdown: graceful
 
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890AbcDef}
@@ -38,5 +57,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
-
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    db:
+      enabled: true

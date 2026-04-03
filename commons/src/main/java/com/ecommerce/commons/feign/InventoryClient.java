@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @FeignClient(
         name = "inventory-service",
-        url = "http://inventory-service:8085",
+        url = "${feign.inventory-service.url:http://localhost:8085}",
         fallback = InventoryClientFallback.class
 )
 public interface InventoryClient {
@@ -57,27 +57,3 @@ public interface InventoryClient {
         private String warehouse;
     }
 }
-
-class InventoryClientFallback implements InventoryClient {
-    @Override
-    public ReservationResponse reserveStock(ReservationRequest request) {
-        return ReservationResponse.builder()
-                .success(false)
-                .message("Inventory service temporarily unavailable")
-                .build();
-    }
-
-    @Override
-    public void releaseStock(ReservationRequest request) {
-    }
-
-    @Override
-    public void restockInventory(RestockRequest request) {
-    }
-
-    @Override
-    public InventoryResponse getInventory(UUID productId) {
-        return null;
-    }
-}
-

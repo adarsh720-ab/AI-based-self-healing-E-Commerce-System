@@ -51,7 +51,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         redis.opsForValue().set(
-                "refresh:" + user.getId(), refreshToken, 604800000, TimeUnit.MILLISECONDS);
+                "refresh:" + user.getId(), refreshToken, 7, TimeUnit.DAYS);
 
         log.info("User registered: {}", user.getEmail());
         return buildAuthResponse(user, accessToken, refreshToken);
@@ -74,7 +74,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         redis.opsForValue().set(
-                "refresh:" + user.getId(), refreshToken, 604800000, TimeUnit.MILLISECONDS);
+                "refresh:" + user.getId(), refreshToken, 7, TimeUnit.DAYS);
 
         log.info("User logged in: {}", user.getEmail());
         return buildAuthResponse(user, accessToken, refreshToken);

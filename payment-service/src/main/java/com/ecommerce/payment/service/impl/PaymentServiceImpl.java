@@ -10,6 +10,8 @@ import com.ecommerce.payment.entity.dtos.request.InitiatePaymentRequest;
 import com.ecommerce.payment.entity.dtos.response.PaymentResponse;
 import com.ecommerce.payment.repository.PaymentRepository;
 import com.ecommerce.payment.service.PaymentService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +30,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final KafkaTemplate<String, PaymentSuccessEvent> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     @Value("${stripe.api.key:sk_test_dummy}")
     private String stripeApiKey;
@@ -71,21 +74,35 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public void handleStripeWebhook(String payload, String signature) {
-        // Parse Stripe event and update payment status
-        // In production: Stripe.apiKey = stripeApiKey; then parse Event from payload
         log.info("Stripe webhook received, processing payment confirmation");
+        String eventId = "stripe_" + UUID.randomUUID();
+        UUID orderId = null;
 
-        // Simulate success for now — wire real Stripe parsing here
-        paymentRepository.findAll().stream()
-                .filter(p -> p.getStatus() == PaymentStatus.PENDING)
-                .findFirst()
-                .ifPresent(payment -> {
-                    payment.setStatus(PaymentStatus.SUCCESS);
-                    payment.setTransactionId("stripe_" + UUID.randomUUID());
-                    payment.setPaidAt(LocalDateTime.now());
-                    paymentRepository.save(payment);
-                    publishPaymentSuccessEvent(payment);
-                });
+        try {
+            JsonNode root = objectMapper.readTree(payload);
+            eventId = root.path("id").asText(eventId);
+            if (root.hasNonNull("orderId")) {
+                orderId = UUID.fromString(root.get("orderId").asText());
+            } else {
+                String metadataOrderId = root.path("data").path("object").path("metadata").path("orderId").asText(null);
+                if (metadataOrderId != null && !metadataOrderId.isBlank()) {
+                    orderId = UUID.fromString(metadataOrderId);
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Unable to parse webhook payload, using latest pending payment fallback: {}", ex.getMessage());
+        }
+
+        Payment payment = (orderId != null
+                ? paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.PENDING)
+                : paymentRepository.findFirstByStatusOrderByCreatedAtDesc(PaymentStatus.PENDING))
+                .orElseThrow(() -> new ResourceNotFoundException("No pending payment found for webhook processing"));
+
+        payment.setStatus(PaymentStatus.SUCCESS);
+        payment.setTransactionId(eventId);
+        payment.setPaidAt(LocalDateTime.now());
+        Payment updated = paymentRepository.save(payment);
+        publishPaymentSuccessEvent(updated);
     }
 
     private void publishPaymentSuccessEvent(Payment payment) {

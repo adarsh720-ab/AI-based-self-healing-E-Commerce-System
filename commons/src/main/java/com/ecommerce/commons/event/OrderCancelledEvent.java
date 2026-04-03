@@ -1,5 +1,6 @@
 package com.ecommerce.commons.event;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,6 +14,7 @@ public class OrderCancelledEvent {
     private String eventType;
     private UUID orderId;
     private UUID userId;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private LocalDateTime timestamp;
 }
 

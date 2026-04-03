@@ -1,5 +1,6 @@
 package com.ecommerce.commons.event;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +15,7 @@ public class PaymentFailedEvent {
     private UUID orderId;
     private UUID userId;
     private String reason;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private LocalDateTime timestamp;
 }
 

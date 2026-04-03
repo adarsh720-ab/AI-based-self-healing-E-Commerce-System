@@ -1,7 +1,7 @@
 package com.ecommerce.user.controller;
 
 import com.ecommerce.user.entity.dtos.request.CreateUserRequest;
-import com.ecommerce.user.entity.dtos.response.UserResponse;
+import com.ecommerce.user.entity.dtos.response.InternalUserResponse;
 import com.ecommerce.user.service.InternalUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,13 +19,13 @@ public class InternalUserController {
     private final InternalUserService internalUserService;
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
+    public ResponseEntity<InternalUserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.ok(internalUserService.createUser(request));
     }
 
     @GetMapping("/by-email")
-    public ResponseEntity<UserResponse> findByEmail(@RequestParam String email) {
-        Optional<UserResponse> user = internalUserService.findByEmail(email);
+    public ResponseEntity<InternalUserResponse> findByEmail(@RequestParam String email) {
+        Optional<InternalUserResponse> user = internalUserService.findByEmail(email);
         return user.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 

@@ -1,0 +1,36 @@
+{
+  "features": [
+    "isError",
+    "isWarn",
+    "hasErrorCode",
+    "hasStackTrace",
+    "serviceEncoded",
+    "latencyMs",
+    "latencyCategory",
+    "errorSeverity",
+    "statusCategory",
+    "is5xx",
+    "is503"
+  ],
+  "services": [
+    "auth-service",
+    "delivery-service",
+    "inventory-service",
+    "notification-service",
+    "order-service",
+    "payment-service",
+    "product-service",
+    "user-service"
+  ],
+  "http_methods": [
+    "DELETE",
+    "GET",
+    "INTERNAL",
+    "PATCH",
+    "POST",
+    "PUT"
+  ],
+  "contamination": 0.088,
+  "n_estimators": 200,
+  "version": "2.0.0"
+}

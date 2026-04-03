@@ -12,7 +12,6 @@ import java.util.UUID;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class CreateOrderRequest {
-    @NotNull
     private UUID userId;
     
     @NotNull
@@ -22,8 +21,6 @@ public class CreateOrderRequest {
     @Valid
     private List<OrderItemRequest> items;
     
-    @NotNull
-    @DecimalMin("0.01")
     private BigDecimal totalAmount;
 }
 

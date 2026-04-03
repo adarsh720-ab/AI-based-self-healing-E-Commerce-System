@@ -1,12 +1,12 @@
 package com.ecommerce.user.service;
 
 import com.ecommerce.user.entity.dtos.request.CreateUserRequest;
-import com.ecommerce.user.entity.dtos.response.UserResponse;
+import com.ecommerce.user.entity.dtos.response.InternalUserResponse;
 
 import java.util.Optional;
 
 public interface InternalUserService {
-    UserResponse createUser(CreateUserRequest request);
-    Optional<UserResponse> findByEmail(String email);
+    InternalUserResponse createUser(CreateUserRequest request);
+    Optional<InternalUserResponse> findByEmail(String email);
     boolean existsByEmail(String email);
 }

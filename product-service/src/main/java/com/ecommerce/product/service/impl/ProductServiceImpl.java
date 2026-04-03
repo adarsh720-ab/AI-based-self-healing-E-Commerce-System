@@ -32,7 +32,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse createProduct(CreateProductRequest request) {
         Product product = productMapper.createProductRequestToEntity(request);
         product.setActive(true);
-        Product saved = productRepository.save(product);
+        Product saved = productRepository.saveAndFlush(product);
         log.info("Product created: {}", saved.getId());
         return productMapper.productToResponse(saved);
     }

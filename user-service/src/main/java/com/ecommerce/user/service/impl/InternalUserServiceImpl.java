@@ -3,8 +3,7 @@ package com.ecommerce.user.service.impl;
 import com.ecommerce.commons.exception.ConflictException;
 import com.ecommerce.user.entity.User;
 import com.ecommerce.user.entity.dtos.request.CreateUserRequest;
-import com.ecommerce.user.entity.dtos.response.UserResponse;
-import com.ecommerce.user.mapper.UserMapper;
+import com.ecommerce.user.entity.dtos.response.InternalUserResponse;
 import com.ecommerce.user.repository.UserRepository;
 import com.ecommerce.user.service.InternalUserService;
 import com.ecommerce.user.utils.enums.Role;
@@ -21,11 +20,10 @@ import java.util.Optional;
 public class InternalUserServiceImpl implements InternalUserService {
 
     private final UserRepository userRepository;
-    private final UserMapper     userMapper;
 
     @Override
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
+    public InternalUserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("Email already exists: " + request.getEmail());
         }
@@ -41,16 +39,29 @@ public class InternalUserServiceImpl implements InternalUserService {
 
         User saved = userRepository.save(user);
         log.info("User created internally: {}", saved.getEmail());
-        return userMapper.userToResponse(saved);
+        return toInternalResponse(saved);
     }
 
     @Override
-    public Optional<UserResponse> findByEmail(String email) {
-        return userRepository.findByEmail(email).map(userMapper::userToResponse);
+    public Optional<InternalUserResponse> findByEmail(String email) {
+        return userRepository.findByEmail(email).map(this::toInternalResponse);
     }
 
     @Override
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    private InternalUserResponse toInternalResponse(User user) {
+        return InternalUserResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .passwordHash(user.getPasswordHash())
+                .phone(user.getPhone())
+                .role(user.getRole().name())
+                .active(user.isActive())
+                .createdAt(user.getCreatedAt())
+                .build();
     }
 }

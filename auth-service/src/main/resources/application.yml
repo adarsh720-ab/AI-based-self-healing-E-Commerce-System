@@ -2,14 +2,17 @@ spring:
   application:
     name: auth-service
 
-  # auth-service has NO database of its own.
-  # It stores refresh tokens in Redis and calls user-service for user data.
-
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASS:}
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 4
+          min-idle: 1
+          max-wait: 2000ms
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
@@ -18,17 +21,24 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
       retries: 3
+      properties:
+        spring.json.add.type.headers: false
+    listener:
+      concurrency: 3
+      ack-mode: BATCH
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
 server:
   port: 8089
+  shutdown: graceful
 
-# JWT — MUST be the same secret across ALL services
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890AbcDef}
   expiration-ms: 86400000
   refresh-expiration-ms: 604800000
 
-# URL of user-service — used by UserServiceClient (Feign)
 services:
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8081}
@@ -37,7 +47,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    redis:
+      enabled: true
 
 logging:
   level:
