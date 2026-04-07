@@ -55,3 +55,6 @@ management:
       enabled: true
     readinessstate:
       enabled: true
+  logging:
+    charset:
+      console: UTF-8

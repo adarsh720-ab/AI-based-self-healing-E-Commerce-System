@@ -6,3 +6,4 @@ CREATE DATABASE payment_db;
 CREATE DATABASE notification_db;
 CREATE DATABASE delivery_db;
 CREATE DATABASE selfhealing_db;
+CREATE DATABASE ai_db;

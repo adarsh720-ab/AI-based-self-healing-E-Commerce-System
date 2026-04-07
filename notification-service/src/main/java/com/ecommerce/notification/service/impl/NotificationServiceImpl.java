@@ -51,7 +51,7 @@ public class NotificationServiceImpl implements NotificationService {
             containerFactory = "anomalyKafkaListenerContainerFactory"
     )
     public void handleAnomaly(AnomalyEvent event) {
-        log.warn("🚨 ANOMALY RECEIVED — service={} type={} confidence={} score={}",
+        log.warn("ANOMALY RECEIVED — service={} type={} confidence={} score={}",
                 event.getServiceId(),
                 event.getAnomalyType(),
                 event.getConfidence(),
@@ -70,7 +70,7 @@ public class NotificationServiceImpl implements NotificationService {
     // ── Anomaly handlers ────────────────────────────────────────────────────
 
     private void handleServiceDown(AnomalyEvent event) {
-        log.error("🔴 SERVICE DOWN | service={} | confidence={} | trace={}",
+        log.error("SERVICE DOWN | service={} | confidence={} | trace={}",
                 event.getServiceId(), event.getConfidence(), event.getTraceId());
         // TODO: SendGrid — send CRITICAL alert email to engineering team
         // TODO: PagerDuty / OpsGenie integration for HIGH confidence
@@ -78,21 +78,21 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private void handleLatencySpike(AnomalyEvent event) {
-        log.warn("🟡 LATENCY SPIKE | service={} | latencyMs={} | confidence={}",
+        log.warn("LATENCY SPIKE | service={} | latencyMs={} | confidence={}",
                 event.getServiceId(), event.getLatencyMs(), event.getConfidence());
         // TODO: SendGrid — send WARNING email to engineering team
         log.info("[ALERT] Latency spike notification sent for: {}", event.getServiceId());
     }
 
     private void handleErrorSpike(AnomalyEvent event) {
-        log.warn("🟠 ERROR SPIKE | service={} | errorCode={} | confidence={}",
+        log.warn("ERROR SPIKE | service={} | errorCode={} | confidence={}",
                 event.getServiceId(), event.getErrorCode(), event.getConfidence());
         // TODO: SendGrid — send WARNING email to engineering team
         log.info("[ALERT] Error spike notification sent for: {}", event.getServiceId());
     }
 
     private void handleGenericAnomaly(AnomalyEvent event) {
-        log.warn("⚪ ANOMALY | service={} | type={} | confidence={}",
+        log.warn("ANOMALY | service={} | type={} | confidence={}",
                 event.getServiceId(), event.getAnomalyType(), event.getConfidence());
         log.info("[ALERT] Generic anomaly notification sent for: {}", event.getServiceId());
     }
