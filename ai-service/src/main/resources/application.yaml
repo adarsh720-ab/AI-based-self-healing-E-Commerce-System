@@ -40,7 +40,7 @@ spring:
           top-p: 0.9
           num-predict: 500
     prompts:
-      system: |
+      system: >
         You are an expert Java microservices engineer specializing in
         Spring Boot, Apache Kafka, and distributed systems.
         Your job is to analyze anomaly events from a production

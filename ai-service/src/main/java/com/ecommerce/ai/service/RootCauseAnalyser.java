@@ -4,13 +4,9 @@ import com.ecommerce.ai.model.Incident;
 import com.ecommerce.commons.event.AnomalyEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.ChatClient;
-import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 
 @Service
 @RequiredArgsConstructor
@@ -19,8 +15,8 @@ public class RootCauseAnalyser {
 
     private final ChatClient chatClient;
 
-    @Value("${ai.prompts.system}")
-    private String systemPrompt;  // ← injected from yml, not hardcoded
+    @Value("${spring.ai.prompts.system}")
+    private String systemPrompt;
 
     public AnalysisResult analyse(AnomalyEvent event) {
         String userPrompt = buildPrompt(event);
@@ -28,17 +24,11 @@ public class RootCauseAnalyser {
                 event.getServiceId(), event.getAnomalyType());
 
         try {
-            Prompt prompt = new Prompt(
-                    java.util.List.of(
-                            new SystemMessage(systemPrompt),  // ← use injected value
-                            new UserMessage(userPrompt)
-                    )
-            );
-
-            String response = chatClient.call(prompt)
-                    .getResult()
-                    .getOutput()
-                    .getContent();
+            String response = chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(userPrompt)
+                    .call()
+                    .content();
 
             log.debug("LLM raw response: {}", response);
             return parseResponse(response, event);
@@ -103,8 +93,8 @@ public class RootCauseAnalyser {
                 return fallbackResult(event);
             }
 
-            String json        = cleaned.substring(start, end + 1);
-            String rootCause   = extractField(json, "rootCause");
+            String json         = cleaned.substring(start, end + 1);
+            String rootCause    = extractField(json, "rootCause");
             String suggestedFix = extractField(json, "suggestedFix");
             String severityStr  = extractField(json, "severity");
 
