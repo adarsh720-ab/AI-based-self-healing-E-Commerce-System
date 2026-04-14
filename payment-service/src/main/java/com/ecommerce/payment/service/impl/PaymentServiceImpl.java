@@ -2,7 +2,6 @@ package com.ecommerce.payment.service.impl;
 
 import com.ecommerce.commons.event.OrderPlacedEvent;
 import com.ecommerce.commons.event.PaymentSuccessEvent;
-import com.ecommerce.commons.exception.PaymentException;
 import com.ecommerce.payment.utils.enums.PaymentStatus;
 import com.ecommerce.commons.exception.ResourceNotFoundException;
 import com.ecommerce.payment.entity.Payment;
