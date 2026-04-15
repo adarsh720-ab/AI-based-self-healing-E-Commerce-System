@@ -13,9 +13,9 @@ import com.ecommerce.user.mapper.UserMapper;
 import com.ecommerce.user.repository.AddressRepository;
 import com.ecommerce.user.repository.UserRepository;
 import com.ecommerce.user.service.UserService;
+import com.ecommerce.user.utils.enums.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.ecommerce.user.utils.enums.Role;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

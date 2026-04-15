@@ -7,3 +7,4 @@ CREATE DATABASE notification_db;
 CREATE DATABASE delivery_db;
 CREATE DATABASE selfhealing_db;
 CREATE DATABASE ai_db;
+CREATE DATABASE action_db;
