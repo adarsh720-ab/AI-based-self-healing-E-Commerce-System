@@ -17,26 +17,48 @@ class AnomalyPredictor:
         self.le_service = None
         self.le_http    = None
         self.meta       = None
+        self.fallback_mode = False
         self._load()
 
     def _load(self):
         model_dir = Path(settings.MODEL_DIR)
         logger.info(f"Loading model artifacts from {model_dir}")
-        self.model      = joblib.load(model_dir / "isolation_forest.pkl")
-        self.scaler     = joblib.load(model_dir / "scaler.pkl")
-        self.le_service = joblib.load(model_dir / "label_encoder_service.pkl")
-        self.le_http    = joblib.load(model_dir / "label_encoder_http.pkl")
-        with open(model_dir / "model_meta.json") as f:
-            self.meta = json.load(f)
-        logger.info(f"Model v{self.meta['version']} loaded — "
-                    f"{self.meta['n_estimators']} trees, "
-                    f"{len(self.meta['features'])} features")
+        required = [
+            model_dir / "isolation_forest.pkl",
+            model_dir / "scaler.pkl",
+            model_dir / "label_encoder_service.pkl",
+            model_dir / "label_encoder_http.pkl",
+        ]
+
+        if all(path.exists() for path in required):
+            self.model      = joblib.load(model_dir / "isolation_forest.pkl")
+            self.scaler     = joblib.load(model_dir / "scaler.pkl")
+            self.le_service = joblib.load(model_dir / "label_encoder_service.pkl")
+            self.le_http    = joblib.load(model_dir / "label_encoder_http.pkl")
+            meta_path = model_dir / "model_meta.json"
+            if meta_path.exists():
+                with open(meta_path) as f:
+                    self.meta = json.load(f)
+            else:
+                self.meta = {"version": "fallback", "n_estimators": 0, "features": []}
+            logger.info(f"Model v{self.meta['version']} loaded — "
+                        f"{self.meta.get('n_estimators', 0)} trees, "
+                        f"{len(self.meta.get('features', []))} features")
+            return
+
+        self.fallback_mode = True
+        self.meta = {"version": "fallback", "n_estimators": 0, "features": []}
+        logger.warning("Model artifacts not found; ML service running in fallback mode")
 
     def _encode_service(self, service_id: str) -> int:
+        if self.fallback_mode or self.le_service is None:
+            return 0
         classes = list(self.le_service.classes_)
         return classes.index(service_id) if service_id in classes else 0
 
     def _encode_http(self, http_method: str) -> int:
+        if self.fallback_mode or self.le_http is None:
+            return 0
         classes = list(self.le_http.classes_)
         return classes.index(http_method) if http_method in classes else 0
 
@@ -76,6 +98,9 @@ class AnomalyPredictor:
 
     def predict(self, log: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            if self.fallback_mode:
+                return self._fallback_predict(log)
+
             features   = self._build_features(log)
             scaled     = self.scaler.transform(features)
             raw_pred   = self.model.predict(scaled)[0]
@@ -95,6 +120,37 @@ class AnomalyPredictor:
                 "anomalyType":  None,
                 "confidence":   None
             }
+
+    def _fallback_predict(self, log: Dict[str, Any]) -> Dict[str, Any]:
+        status_code = int(log.get("statusCode", 200))
+        latency     = float(log.get("latencyMs", 0))
+        error_code  = log.get("errorCode")
+        level       = log.get("level", "INFO")
+
+        is_anomaly = (
+            status_code >= 500
+            or latency >= 2000
+            or level == "ERROR"
+            or bool(error_code)
+        )
+
+        if status_code >= 503:
+            score = -0.08
+        elif latency >= 2000:
+            score = -0.12
+        elif status_code >= 400:
+            score = -0.04
+        elif level == "ERROR":
+            score = -0.03
+        else:
+            score = 0.02
+
+        return {
+            "isAnomaly":    is_anomaly,
+            "anomalyScore": round(score, 4),
+            "anomalyType":  self._classify_anomaly(log, score) if is_anomaly else None,
+            "confidence":   self._confidence(score) if is_anomaly else None
+        }
 
     def _classify_anomaly(self, log: Dict[str, Any], score: float) -> str:
         status_code = int(log.get("statusCode", 200))

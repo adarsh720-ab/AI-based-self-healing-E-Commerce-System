@@ -2,7 +2,7 @@
 # ================================================================
 # build-images.sh
 # Run from your PROJECT ROOT (where pom.xml and all services are)
-# Usage: ./k8s/build-images.sh
+# Usage: ./k8s-deploy/build-images.shbash k8s-deploy/build-images.sh v1
 # ================================================================
 
 set -e
@@ -34,7 +34,7 @@ for entry in "${SPRING_SERVICES[@]}"; do
   echo ""
   echo ">>> Building $SERVICE ..."
   docker build \
-    -f k8s/dockerfiles/${SERVICE}.Dockerfile \
+    -f k8s-deploy/dockerfiles/${SERVICE}.Dockerfile \
     -t ${REGISTRY}/${SERVICE}:${TAG} \
     .
   echo ">>> $SERVICE built successfully"

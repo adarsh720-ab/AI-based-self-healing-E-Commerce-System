@@ -3,12 +3,8 @@ FROM maven:3.9.6-eclipse-temurin-21 AS builder
 WORKDIR /build
 
 COPY pom.xml .
-COPY commons/pom.xml commons/
-COPY ai-service/pom.xml ai-service/
+COPY . .
 RUN mvn dependency:go-offline -pl ai-service -am -q
-
-COPY commons/src commons/src
-COPY ai-service/src ai-service/src
 RUN mvn clean package -pl ai-service -am -DskipTests -q
 
 # ── Stage 2: Runtime ──────────────────────────────────────────
