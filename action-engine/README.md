@@ -70,8 +70,8 @@ action-engine:
     - "8092:8092"
   environment:
     SPRING_DATASOURCE_URL: jdbc:postgresql://ecommerce-postgres:5432/action_db
-    SPRING_DATASOURCE_USERNAME: postgres
-    SPRING_DATASOURCE_PASSWORD: postgres
+    SPRING_DATASOURCE_USERNAME: enter your username
+    SPRING_DATASOURCE_PASSWORD: enter your password
     SPRING_DATA_REDIS_HOST: ecommerce-redis
     SPRING_KAFKA_BOOTSTRAP_SERVERS: ecommerce-kafka:9092
   depends_on:

@@ -13,8 +13,8 @@ services:
     container_name: ecommerce-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: enter your username
+      POSTGRES_PASSWORD: enter your password
     ports:
       - "5432:5432"
     volumes:
@@ -210,8 +210,8 @@ services:
       - "8092:8092"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/action_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_USERNAME: enter your username
+      SPRING_DATASOURCE_PASSWORD: enter your password
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     networks:

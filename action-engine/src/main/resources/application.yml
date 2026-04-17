@@ -8,8 +8,8 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5432/action_db
-    username: postgres
-    password: postgres
+    username: enter your username
+    password: enter your password
     hikari:
       minimum-idle: 2
       maximum-pool-size: 10

@@ -113,8 +113,8 @@ Create a `.env` file in the project root for easy configuration:
 ```bash
 # Database
 DB_HOST=localhost
-DB_USER=postgres
-DB_PASS=postgres
+DB_USER=enter your username
+DB_PASS=enter your password
 
 # Redis
 REDIS_HOST=localhost

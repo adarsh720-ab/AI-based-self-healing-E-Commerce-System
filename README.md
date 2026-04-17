@@ -1,231 +1,248 @@
-# AI-Powered Self-Healing E-Commerce Platform
+# Self-Healing Ecommerce Platform (Microservices)
 
-## Package Structure (Applied to Every Service)
+A production-style, event-driven ecommerce backend built with Spring Boot, Spring Cloud Gateway, Kafka, PostgreSQL, Redis, Elasticsearch, and AI-assisted incident analysis.
 
-```
-com.ecommerce.{service}/
-├── entity/                      ← JPA entities (@Entity classes)
-│   └── dtos/
-│       ├── request/             ← Request DTOs (@Valid, @NotBlank etc.)
-│       └── response/            ← Response DTOs (returned to client)
-├── mapper/                      ← MapStruct interfaces (entity ↔ DTO)
-├── repository/                  ← JpaRepository interfaces
-├── service/                     ← Service INTERFACES (contracts)
-│   └── impl/                    ← Service IMPLEMENTATIONS (@Service)
-└── controller/                  ← REST controllers (@RestController)
-```
+![Java](https://img.shields.io/badge/Java-21-blue)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.x-6DB33F)
+![Architecture](https://img.shields.io/badge/Architecture-Microservices-orange)
+![Messaging](https://img.shields.io/badge/Messaging-Kafka-black)
+![Deployment](https://img.shields.io/badge/Deployment-Kubernetes-326CE5)
 
-## Project Structure
+## Quick Links
 
-```
-ecommerce-platform/
-├── pom.xml                      ← Parent pom (all versions declared here)
-├── docker-compose.yml           ← Local infra: Postgres, Kafka, Redis, ES
-├── scripts/init-db.sql          ← Creates all 8 databases on first run
-│
-├── commons/                     ← Shared library (plain JAR, not runnable)
-│   └── src/.../commons/
-│       ├── security/            → JwtUtil.java + JwtAuthFilter.java
-│       ├── util/                → KafkaLogInterceptor.java (AOP)
-│       ├── event/               → All Kafka event POJOs
-│       ├── feign/               → InventoryClient + UserServiceClient
-│       └── exception/           → All exceptions + GlobalExceptionHandler
-│
-├── auth-service/    port 8089   ← Issues + validates JWT tokens
-├── user-service/    port 8081   ← User profiles, internal endpoints
-├── product-service/ port 8082   ← Product catalog + Elasticsearch
-├── inventory-service/ port 8085 ← Stock management + Redis
-├── order-service/   port 8083   ← Orders + Kafka publishing
-├── payment-service/ port 8084   ← Stripe + Kafka consumer
-├── notification-service/ port 8086 ← Email/SMS Kafka consumers only
-├── delivery-service/ port 8087  ← Shipment tracking + Kafka
-└── api-gateway/     port 8080   ← Spring Cloud Gateway
-```
+- [Architecture Deep Dive](docs/ARCHITECTURE.md)
+- [Service Map](#service-map)
+- [API Examples](#api-examples-via-api-gateway)
+- [AI Service Sample Responses](#ai-service-sample-responses)
+- [Local Development (Docker Compose)](#local-development-docker-compose)
+- [Kubernetes Deployment](#kubernetes-deployment)
 
----
+## What This Project Is
 
-## How to Run
+`ecommerce-platform` is a modular microservices system where business services (auth, users, products, orders, payments, inventory, delivery, notifications) are separated by bounded contexts and connected through synchronous APIs plus asynchronous events.
 
-### Prerequisites
-- Java 21
-- Maven 3.9+
-- Docker + Docker Compose
+It also includes a **self-healing pipeline**:
+- `ml-service` detects anomalies from service logs/events
+- `ai-service` performs LLM-assisted root cause analysis (Ollama/Qwen)
+- `action-engine` can execute corrective workflows
 
-### Step 1 — Start infrastructure
+## Problem It Solves
+
+Traditional monolith-style ecommerce apps face bottlenecks in scale, fault isolation, and incident response. This project addresses:
+- **Scalability:** independent services with HPA support in Kubernetes
+- **Resilience:** failure isolation by service and asynchronous Kafka communication
+- **Operational visibility:** health endpoints and container-native deployment model
+- **Faster incident triage:** AI-generated root-cause suggestions for anomalies
+
+## Core Capabilities
+
+- JWT-based authentication and authorization flow
+- API Gateway routing for all public REST APIs
+- Product catalog, inventory reservation/release, order lifecycle, payment orchestration
+- Notification and delivery domain separation
+- AI-assisted anomaly interpretation and suggested remediation
+- Docker and Kubernetes deployment-ready structure
+
+## Tech Stack
+
+- **Backend:** Java 21, Spring Boot 3.4.x, Spring Cloud Gateway
+- **Messaging:** Apache Kafka
+- **Datastores:** PostgreSQL, Redis, Elasticsearch
+- **AI:** Spring AI + Ollama (Qwen)
+- **ML:** Python-based `ml-service`
+- **Infra:** Docker Compose, Kubernetes manifests, Ingress, HPA
+
+## Service Map
+
+From `pom.xml`, active modules/services include:
+- `api-gateway`
+- `auth-service`
+- `user-service`
+- `product-service`
+- `inventory-service`
+- `order-service`
+- `payment-service`
+- `notification-service`
+- `delivery-service`
+- `ai-service`
+- `action-engine`
+- `commons`
+
+## API Examples (via API Gateway)
+
+Gateway base URL (local): `http://localhost:8080`
+
 ```bash
+# Auth: register
+curl -X POST "http://localhost:8080/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@example.com","password":"StrongPass123!"}'
+
+# Auth: login
+curl -X POST "http://localhost:8080/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@example.com","password":"StrongPass123!"}'
+
+# Products: list
+curl "http://localhost:8080/api/products?page=0&size=10"
+
+# Products: search
+curl "http://localhost:8080/api/products/search?q=phone&page=0&size=10"
+
+# Orders: create (replace <JWT>)
+curl -X POST "http://localhost:8080/api/orders" \
+  -H "Authorization: Bearer <JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"items":[{"productId":"11111111-1111-1111-1111-111111111111","quantity":1}]}'
+
+# Payments: initiate
+curl -X POST "http://localhost:8080/api/payments/initiate" \
+  -H "Content-Type: application/json" \
+  -d '{"orderId":"22222222-2222-2222-2222-222222222222","amount":499.99,"currency":"USD"}'
+```
+
+## AI Service Sample Responses
+
+Below are your provided real examples of `ai-service` LLM output.
+
+### 1) Multiple register request with already registered email
+
+```json
+{
+  "rootCause": "A unique email address was attempted to be registered again, causing a ConflictException.",
+  "suggestedFix": [
+    "Review the registration logic to ensure that duplicate emails are not allowed.",
+    "Implement a check for existing users with the same email before processing the POST request."
+  ],
+  "severity": "LOW"
+}
+```
+
+### 2) Service Down
+
+```json
+{
+  "rootCause": "The auth-service attempted to communicate with another microservice at http://localhost:8081/internal/users/exists but received a connection refused error.",
+  "suggestedFix": [
+    "Check if the target service is running and accessible on port 8081.",
+    "Verify network configurations and firewall rules to ensure there are no blocking issues.",
+    "Review logs of the target microservice for any errors or warnings that might indicate why it's not responding."
+  ],
+  "severity": "CRITICAL"
+}
+```
+
+## Local Development (Docker Compose)
+
+Prerequisites:
+- Docker Desktop
+- Java 21 and Maven (for local non-container builds)
+
+```powershell
+Set-Location "C:\Users\adars\OneDrive\Desktop\Self Healing ecommerce platform\ecommerce V2\ecommerce-restructured"
 docker compose up -d
-```
-Wait ~30 seconds for Kafka and Elasticsearch to fully start.
-Check everything is running:
-```bash
 docker compose ps
 ```
 
-### Step 2 — Build commons first (all services depend on it)
-```bash
-# From the root ecommerce-platform/ folder:
-mvn clean install -pl commons
+Stop stack:
+
+```powershell
+docker compose down
 ```
 
-### Step 3 — Start user-service FIRST
-auth-service calls user-service via Feign on startup.
-user-service must be running before auth-service starts.
-```bash
-mvn spring-boot:run -pl user-service
-```
-Wait for: `Started UserServiceApplication on port 8081`
+## Kubernetes Deployment
 
-### Step 4 — Start auth-service
-```bash
-mvn spring-boot:run -pl auth-service
-```
-Wait for: `Started AuthServiceApplication on port 8089`
+Kubernetes files are under `k8s-deploy/`.
 
-### Step 5 — Start remaining services (any order)
-```bash
-mvn spring-boot:run -pl product-service
-mvn spring-boot:run -pl inventory-service
-mvn spring-boot:run -pl order-service
-mvn spring-boot:run -pl payment-service
-mvn spring-boot:run -pl notification-service
-mvn spring-boot:run -pl delivery-service
+### Build images (Windows PowerShell)
+
+```powershell
+Set-Location "C:\Users\adars\OneDrive\Desktop\Self Healing ecommerce platform\ecommerce V2\ecommerce-restructured"
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\k8s-deploy\build-images.ps1"
 ```
 
-### Step 6 — Start API Gateway last
-```bash
-mvn spring-boot:run -pl api-gateway
+### Apply manifests
+
+```powershell
+kubectl apply -f .\k8s-deploy\k8s\namespace.yaml
+kubectl apply -f .\k8s-deploy\k8s\secrets.yaml
+kubectl apply -f .\k8s-deploy\k8s\configmap.yaml
+kubectl apply -f .\k8s-deploy\k8s\infrastructure
+kubectl apply -f .\k8s-deploy\k8s\services
+kubectl apply -f .\k8s-deploy\k8s\autoscaling
+kubectl apply -f .\k8s-deploy\k8s\ingress
 ```
 
-### Build everything at once (optional)
-```bash
-mvn clean install -DskipTests
+### Verify rollout
+
+```powershell
+kubectl get pods -n ecommerce
+kubectl get svc -n ecommerce
+kubectl get hpa -n ecommerce
+kubectl get events -n ecommerce --sort-by=.metadata.creationTimestamp
 ```
 
----
+## AI/Ollama Runtime Note
 
-## Test with Postman
+`ai-service` uses Spring AI Ollama integration and needs a reachable Ollama endpoint.
 
-### 1. Register
-```
-POST http://localhost:8089/api/auth/register
-Content-Type: application/json
+- If Ollama runs on host machine, set reachable base URL for cluster/pods.
+- In your current config, `ai-service` reads `OLLAMA_BASE_URL` in `ai-service/src/main/resources/application.yaml`.
 
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "phone": "9999999999"
-}
+Example runtime patch:
+
+```powershell
+kubectl set env deployment/ai-service -n ecommerce OLLAMA_BASE_URL=http://host.docker.internal:11434
+kubectl rollout restart deployment/ai-service -n ecommerce
+kubectl rollout status deployment/ai-service -n ecommerce --timeout=180s
 ```
 
-### 2. Login
-```
-POST http://localhost:8089/api/auth/login
-Content-Type: application/json
+## Observability and Troubleshooting
 
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-Copy the `accessToken` from the response.
-
-### 3. Get profile (protected)
-```
-GET http://localhost:8081/api/users/me
-Authorization: Bearer <accessToken>
+```powershell
+kubectl logs deployment/api-gateway -n ecommerce --tail=200
+kubectl logs deployment/ai-service -n ecommerce --tail=200
+kubectl describe pod <pod-name> -n ecommerce
+kubectl get events -n ecommerce --sort-by=.metadata.creationTimestamp
 ```
 
-### 4. Create product
-```
-POST http://localhost:8082/api/products
-Authorization: Bearer <accessToken>
-Content-Type: application/json
+Common issues:
+- `ImagePullBackOff`: image tag/name mismatch or image not present in local cluster runtime
+- `CrashLoopBackOff` on `ai-service`: unreachable Ollama endpoint or startup configuration issue
+- HPA target `unknown`: metrics-server not installed/ready
 
-{
-  "name": "iPhone 15",
-  "description": "Latest Apple phone",
-  "price": 79999.00,
-  "category": "Electronics",
-  "sellerId": "<any-uuid>",
-  "stockQuantity": 100
-}
-```
+## Security and Configuration
 
-### 5. Place order
-```
-POST http://localhost:8083/api/orders
-Authorization: Bearer <accessToken>
-Content-Type: application/json
+- Replace placeholder credentials in configs before production use.
+- Never commit real secrets; prefer Kubernetes Secrets / external secret manager.
+- Keep JWT and API keys environment-specific.
 
-{
-  "addressId": "<any-uuid>",
-  "totalAmount": 79999.00,
-  "items": [
-    {
-      "productId": "<product-id>",
-      "quantity": 1,
-      "unitPrice": 79999.00
-    }
-  ]
-}
+## Repository Layout (High-level)
+
+```text
+ecommerce-restructured/
+  api-gateway/
+  auth-service/
+  user-service/
+  product-service/
+  inventory-service/
+  order-service/
+  payment-service/
+  notification-service/
+  delivery-service/
+  ai-service/
+  action-engine/
+  ml-service/
+  commons/
+  k8s-deploy/
 ```
 
-### 6. Logout
-```
-POST http://localhost:8089/api/auth/logout
-Authorization: Bearer <accessToken>
-```
+## Who This Is For
 
----
+- Backend engineers learning event-driven microservices
+- DevOps engineers practicing Docker/Kubernetes deployment patterns
+- Teams exploring LLM-assisted incident triage in distributed systems
 
-## What Changed in the Restructure
+## License
 
-### Package changes per service
-
-| Before | After |
-|--------|-------|
-| `service/AuthService.java` (concrete class) | `service/AuthService.java` (interface) + `service/impl/AuthServiceImpl.java` |
-| `dto/UserDtos.java` (flat) | `entity/dtos/request/` + `entity/dtos/response/` (split) |
-| `service/UserService.java` (concrete) | `service/UserService.java` (interface) + `service/impl/UserServiceImpl.java` |
-| `dto/ProductRequest.java` (flat) | `entity/dtos/request/CreateProductRequest.java` |
-| Controllers importing from `dto.*` | Controllers importing from `entity.dtos.request.*` and `entity.dtos.response.*` |
-| `@Mapper` without componentModel | `@Mapper(componentModel = "spring")` for Spring DI |
-
-### Logic — unchanged
-All business logic, Kafka flows, security config, JWT validation, Redis usage, and database queries are identical to the original. Only package locations and import paths changed.
-
----
-
-## Service Ports
-
-| Service              | Port |
-|----------------------|------|
-| auth-service         | 8089 |
-| user-service         | 8081 |
-| product-service      | 8082 |
-| order-service        | 8083 |
-| payment-service      | 8084 |
-| inventory-service    | 8085 |
-| notification-service | 8086 |
-| delivery-service     | 8087 |
-| api-gateway          | 8080 |
-| Kafka UI             | 9090 |
-| PostgreSQL           | 5432 |
-| Redis                | 6379 |
-| Kafka                | 9092 |
-| Elasticsearch        | 9200 |
-
-## Environment Variables (.env file — never commit)
-```
-DB_HOST=localhost
-DB_USER=postgres
-DB_PASS=postgres
-KAFKA_BOOTSTRAP=localhost:9092
-REDIS_HOST=localhost
-JWT_SECRET=mySecretKey123456789012345678901234567890AbcDef
-STRIPE_API_KEY=sk_test_your_key_here
-SENDGRID_API_KEY=SG.your_key_here
-TWILIO_ACCOUNT_SID=ACyour_sid
-TWILIO_AUTH_TOKEN=your_token
-```
+Add your license in this repository root (for example: MIT, Apache-2.0, or proprietary internal).
